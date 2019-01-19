@@ -23,4 +23,4 @@ FROM CNLYR002.CURR_STDNT_TERM_CLASS_INFO a
               a.STDNT_ID=b.STDNT_ID AND
               a.TERM_CD=b.TERM_CD
   /*clean up and filter as appropriate*/
-WHERE a.INCL_GPA_IND = 1 AND c.FIRST_TERM_ATTND_CD >= '1560';
+WHERE a.INCL_GPA_IND = 1 AND c.FIRST_TERM_ATTND_CD >= '1560' AND b.PRMRY_CRER_CD LIKE '%U%';
