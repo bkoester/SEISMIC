@@ -11,3 +11,6 @@ Shared code and standards for participants in the SEISMIC collaboration. Code is
 4. `course_performance_setup.R`: Loads libraries, reads in data.
 
 5. `course_performance.R`: Creates plots,regressions, which can be (but are not required to be) wrapped in markdown.
+
+## Output
+`test.pdf`: Plots of 'grade penalties' and regression tables that include coefficients for URM, gender, and first gen. These are a straw man and a launching point.
