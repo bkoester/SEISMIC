@@ -1,0 +1,41 @@
+---
+title: "Course DEI Report"
+author: "Ben"
+date: "1/29/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This report first addresses single course (aggregated over many terms) grade penalties by:
+
+1. Gender (1 = Female, 0 = male)
+
+2. First Gen (1 = First gen)
+
+3. URM (1 = URM)
+
+Grades vs. GPAOs are given for each pair in 3 plots. These are followed by the results of a linear regression: `grade ~ GPAO + ACT_MATH + ACT_ENGL + SCHOOL + HS_GPA + ACAD_LVL + f(GENDER, URM, First Gen)` where `f` is the combination of interaction terms. In the table that follows the plots, we show
+only the coefficients and the interaction terms.
+
+## Results
+
+```{r cars,echo=FALSE,message=FALSE,results="asis"}
+
+source('~/Box Sync/SEISMIC/SEISMIC/course_performance_setup.R')
+source('~/Box Sync/SEISMIC/SEISMIC/compare_performance.R')
+data  <- course_performance_setup()
+crse  <- data %>% distinct(scCNAME) 
+ncrse <- dim(crse)[1]
+
+for (i in 1:ncrse)
+{
+  print(crse$scCNAME[i])
+  jj <- compare_performance(data %>% filter(data$scCNAME == crse$scCNAME[i]))
+}
+
+```
