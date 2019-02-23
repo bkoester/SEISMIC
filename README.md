@@ -12,5 +12,7 @@ Shared code and standards for participants in the SEISMIC collaboration. Code is
 
 5. `course_performance.R`: Creates plots,regressions, which can be (but are not required to be) wrapped in markdown.
 
+6. `basic_compute_pairwise.R`: Takes CLEANED student course and student record tables (max is about 6000 students) and outputs a two elements list: a similarity matrix (it isn't a matrix strictly speaking), and clusters students by similarity.
+
 ## Output
 `test.pdf`: Plots of 'grade penalties' and regression tables that include coefficients for URM, gender, and first gen. These are a straw man and a launching point.
