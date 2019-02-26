@@ -9,6 +9,12 @@
 #     for 6000 students in ~ 5000 courses this is > 33 x 10^6 rows.
 #sr1: the assignment of students to clusters because it's fun. 
 #     in the same order as was given.
+#
+#
+#EXAMPLE for UMich, beginning with the output of LARC.sql (
+#temp <- basic_compute_pairwise(larc_sql_tab %>% select(STDNT_ID,CATLG_NBR,CRSE_ID_CD) %>% filter(CATLG_NBR < 500),
+#                               larc_sql_tab %>% filter(FIRST_TERM_ATTND_CD == 1660) %>% select(STDNT_ID) %>% distinct(STDNT_ID,.keep_all=TRUE))
+#
 ##########
 basic_compute_pairwise <- function(sc,sr,keep_cols='NONE',MIN_COURSE_SIZE=0)
 {
@@ -21,7 +27,7 @@ basic_compute_pairwise <- function(sc,sr,keep_cols='NONE',MIN_COURSE_SIZE=0)
   
   print(Sys.time())
   
-  if (keep_cols != 'NONE')
+  if (keep_cols[1] != 'NONE')
     {
       sr1 <- sr %>% select(c('STDNT_ID',keep_cols))
     }
