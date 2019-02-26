@@ -23,11 +23,11 @@ basic_compute_pairwise <- function(sc,sr,keep_cols='NONE',MIN_COURSE_SIZE=0)
   
   if (keep_cols != 'NONE')
     {
-      sr1 <- sr1 %>% select(c('STDNT_ID',keep_cols))
+      sr1 <- sr %>% select(c('STDNT_ID',keep_cols))
     }
   else
     {
-      sr1 <- sr1 %>% select(STDNT_ID)
+      sr1 <- sr %>% select(STDNT_ID)
     }
   
   print('trimmed student record columns')
