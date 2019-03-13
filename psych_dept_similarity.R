@@ -15,8 +15,8 @@ read_data <- function()
   stud <- read_tsv("Box Sync/SEISMIC/SEISMIC_Data/students.tsv")
   temp <- basic_compute_pairwise(stud %>% select(STDNT_ID,CATLG_NBR,CRSE_ID_CD) %>% filter(CATLG_NBR < 500),
                                  stud %>% filter(FIRST_TERM_ATTND_CD == 1660) %>% 
-                                   select(c(UM_DGR_1_MAJOR_1_DES,STDNT_GNDR_SHORT_DES,STDNT_UNDREP_MNRTY_IND,STDNT_ID)) %>% 
+                                   select(c(UM_DGR_1_MAJOR_1_DES,STDNT_GNDR_SHORT_DES,STDNT_UNDREP_MNRTY_IND,FIRST_GEN,STDNT_ID)) %>% 
                                    distinct(STDNT_ID,.keep_all=TRUE),
-                                 keep_cols=c('UM_DGR_1_MAJOR_1_DES','STDNT_GNDR_SHORT_DES','STDNT_UNDREP_MNRTY_IND'))
+                                 keep_cols=c('UM_DGR_1_MAJOR_1_DES','STDNT_GNDR_SHORT_DES','STDNT_UNDREP_MNRTY_IND','FIRST_GEN'))
   return(temp)
 }
