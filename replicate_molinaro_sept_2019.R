@@ -1,24 +1,65 @@
+###########################
+#quick and dirty analysis of factors associated with 
+#STEM outcomes, orginally done at UC Davis.
+#student population:
+#MAJORS: all undergraduate
+#INTERNATIONAL STATUS: all
+#DEGREE SEEKING STATUS: all
+#TRANSFER STATUS: all
+#COHORTS: FA 2015 to present.
+#INPUT tables:
+#---------------------
+#sr - student record:
+#STDNT_ID - unique ID
+#FIRST_GEN: 0 or 1
+#STDNT_DMSTC_UNDREP_MNRTY_CD: 0 or 1
+#STDNT_GNDR_SHORT_DES: Male or female
+#FIRST_TERM_ATTND_CD: first term attended college
+#MEDNUM: median income of permanent zipocde
+#------------------------
+#sc: student course - 
+#STDNT_ID:unique student ID
+#SBJCT_CD: course subject
+#CATLG_NBR: course catalog number
+#TERM_CD: Term code
+#GRD_PNTS_PER_UNIT_NBR: course grade
+#TERMYR: the year in the student's career the course was taken
+#-----------
+#ctab: STEM course list (read in on the fly)
+#SBJCT_CD:  course subject
+#CATLG_NBR: course catalog number
+###############################
 replicate_molinaro_sept_2019 <- function(sr,sc)
 {
-    library(tidyverse)
-  
+    require(tidyverse)
+    
+    #use a local script to compute the year in student's career that a 
+    #course was a taken. This script is particular to Michigan, so not it's not shared.
     source('/Users/bkoester/Google\ Drive/code/Mellon/TOF/term_count.R')
   
+    #these are our two main tables. I read them in to the R session and give them as
+    #arguments.
     #sr   <- read_tsv("~/Box Sync/LARC.WORKING/BPK_LARC_STUDENT_RECORD_20190529.tab")
     #sc   <- read_tsv("~/Box Sync/LARC.WORKING/BPK_LARC_STUDENT_COURSE_20190529.tab")
+   
+    #the course table, also read from my local disk (also on github)
+    ctab  <- read_tsv("/Users/bkoester/Google Drive/code/SEISMIC/gitSEISMIC/SEISMIC/STEM_courses_UM.tab")
+    ctab  <- ctab %>% mutate(CNAME=str_c(SBJCT_CD,CATLG_NBR))
+    ctab  <- ctab %>% select(-c(SBJCT_CD,CATLG_NBR))
+  
     sr <- sr %>% filter(FIRST_TERM_ATTND_CD >= 2060) %>% #1650) %>% 
       select(c(STDNT_ID,FIRST_GEN,STDNT_DMSTC_UNDREP_MNRTY_CD,
                STDNT_GNDR_SHORT_DES,FIRST_TERM_ATTND_CD,MEDNUM))
     sr <- sr %>% drop_na()
-    sr <- uci_opportunity(sr)
+    
+    #compute the UCD
+    sr <- ucd_opportunity(sr)
     sr <- sr %>% drop_na()
     
     
     sc <- term_count(sr,sc)
   
-    ctab  <- read_tsv("/Users/bkoester/Google Drive/code/SEISMIC/gitSEISMIC/SEISMIC/STEM_courses_UM.tab")
-    ctab  <- ctab %>% mutate(CNAME=str_c(SBJCT_CD,CATLG_NBR))
-    ctab  <- ctab %>% select(-c(SBJCT_CD,CATLG_NBR))
+   
     sc <- sc   %>% mutate(CNAME=str_c(SBJCT_CD,CATLG_NBR)) %>% filter(TERM_CD >= 1650)
     sc <- sc %>% left_join(sr,by='STDNT_ID')
     sc <- sc %>% drop_na(OPP)
@@ -65,7 +106,7 @@ plot_results <- function(aa)
 }
 
 
-uci_opportunity <- function(sr)
+ucd_opportunity <- function(sr)
 {
   sr <- sr %>% mutate(OPP='Other')
   sr$OPP <- 'Other'
