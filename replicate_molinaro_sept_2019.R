@@ -23,13 +23,18 @@
 #CATLG_NBR: course catalog number
 #TERM_CD: Term code
 #GRD_PNTS_PER_UNIT_NBR: course grade
+#UNITS_ERND_NBR: credits/units award for course completion.
 #TERMYR: the year in the student's career the course was taken
 #-----------
 #ctab: STEM course list (read in on the fly)
 #SBJCT_CD:  course subject
 #CATLG_NBR: course catalog number
+#-----
+#OPTIONS:
+#OPP: T/F. Calculate/plot the UC Davis Opportunity Factors?
+#PRIV: T/F. Calculate/plot H. Rypkema's Privilege Index?
 ###############################
-replicate_molinaro_sept_2019 <- function(sr,sc)
+replicate_molinaro_sept_2019 <- function(sr,sc,PRIV=TRUE,OPP=TRUE)
 {
     require(tidyverse)
     
@@ -54,39 +59,85 @@ replicate_molinaro_sept_2019 <- function(sr,sc)
     
     #compute the UCD
     sr <- ucd_opportunity(sr)
-    sr <- sr %>% drop_na()
     
+    #compute the privilege index
+    sr <- privilege_index(sr)
+    
+    sr <- sr %>% drop_na()
     
     sc <- term_count(sr,sc)
   
-   
     sc <- sc   %>% mutate(CNAME=str_c(SBJCT_CD,CATLG_NBR)) %>% filter(TERM_CD >= 1650)
     sc <- sc %>% left_join(sr,by='STDNT_ID')
-    sc <- sc %>% drop_na(OPP)
     
-    fy_results <- sc %>% filter(TERMYR == 1.5) %>% distinct(STDNT_ID,.keep_all=TRUE) %>% group_by(OPP) %>% 
-      summarize(FY_MEAN=mean(EOT_GPA,na.rm=TRUE),N=n())
+    #now the analyses
+    if (OPP == TRUE)
+    {
+      opp_output  <- opportunity_analysis(sc,ctab)
+      tt <- plot_opp_results(opp_output)
+    }
+    if (PRIV == TRUE)
+    {
+      priv_output <- privilege_analysis(sc,ctab)
+      tt <- plot_priv_results(priv_output)
+    }
     
-    scsci      <- ctab %>% left_join(sc,by='CNAME')
-    
-    crse_results <- scsci %>% group_by(CNAME,OPP) %>% 
-      summarize(CRSE_MEAN=mean(GRD_PNTS_PER_UNIT_NBR,na.rm=TRUE),
-                N=n()) %>% ungroup()
-    sci_results <- scsci %>% filter(TERMYR <= 1.5) %>% group_by(STDNT_ID) %>% 
-      mutate(EOT_SCI=weighted.mean(GRD_PNTS_PER_UNIT_NBR,UNITS_ERND_NBR,na.rm=TRUE)) %>% ungroup() %>% 
-      distinct(STDNT_ID,.keep_all=TRUE) %>% group_by(OPP) %>%
-      summarize(FY_SCI_MEAN=mean(EOT_SCI,na.rm=TRUE),N=n())
-    
-    sci_results_ind <- scsci %>% filter(TERMYR <= 1.5) %>% group_by(STDNT_ID) %>% 
-      mutate(EOT_SCI=weighted.mean(GRD_PNTS_PER_UNIT_NBR,UNITS_ERND_NBR,na.rm=TRUE)) %>% ungroup() %>% 
-      distinct(STDNT_ID,.keep_all=TRUE)
-    
-    return(list(fy_results,crse_results,sci_results,sci_results_ind))
-    
+    return()
 }  
  
+opportunity_analysis <- function(sc,ctab)
+{
+  sc <- sc %>% drop_na(OPP)
+  
+  fy_results <- sc %>% filter(TERMYR == 1.5) %>% distinct(STDNT_ID,.keep_all=TRUE) %>% group_by(OPP) %>% 
+    summarize(FY_MEAN=mean(EOT_GPA,na.rm=TRUE),N=n())
+  
+  scsci      <- ctab %>% left_join(sc,by='CNAME')
+  
+  crse_results <- scsci %>% group_by(CNAME,OPP) %>% 
+    summarize(CRSE_MEAN=mean(GRD_PNTS_PER_UNIT_NBR,na.rm=TRUE),
+              N=n()) %>% ungroup()
+  sci_results <- scsci %>% filter(TERMYR <= 1.5) %>% group_by(STDNT_ID) %>% 
+    mutate(EOT_SCI=weighted.mean(GRD_PNTS_PER_UNIT_NBR,UNITS_ERND_NBR,na.rm=TRUE)) %>% ungroup() %>% 
+    distinct(STDNT_ID,.keep_all=TRUE) %>% group_by(OPP) %>%
+    summarize(FY_SCI_MEAN=mean(EOT_SCI,na.rm=TRUE),N=n())
+  
+  sci_results_ind <- scsci %>% filter(TERMYR <= 1.5) %>% group_by(STDNT_ID) %>% 
+    mutate(EOT_SCI=weighted.mean(GRD_PNTS_PER_UNIT_NBR,UNITS_ERND_NBR,na.rm=TRUE)) %>% ungroup() %>% 
+    distinct(STDNT_ID,.keep_all=TRUE)
+  
+  return(list(fy_results,crse_results,sci_results,sci_results_ind))
+  
+  
+}
+
+privilege_analysis <- function(sc,ctab)
+{
+  sc <- sc %>% drop_na(PRIV_INDEX)
+  
+  fy_results <- sc %>% filter(TERMYR == 1.5) %>% distinct(STDNT_ID,.keep_all=TRUE) %>% group_by(PRIV_INDEX) %>% 
+    summarize(FY_MEAN=mean(EOT_GPA,na.rm=TRUE),N=n())
+  
+  scsci      <- ctab %>% left_join(sc,by='CNAME')
+  
+  crse_results <- scsci %>% group_by(CNAME,PRIV_INDEX) %>% 
+    summarize(CRSE_MEAN=mean(GRD_PNTS_PER_UNIT_NBR,na.rm=TRUE),
+              N=n()) %>% ungroup()
+  sci_results <- scsci %>% filter(TERMYR <= 1.5) %>% group_by(STDNT_ID) %>% 
+    mutate(EOT_SCI=weighted.mean(GRD_PNTS_PER_UNIT_NBR,UNITS_ERND_NBR,na.rm=TRUE)) %>% ungroup() %>% 
+    distinct(STDNT_ID,.keep_all=TRUE) %>% group_by(PRIV_INDEX) %>%
+    summarize(FY_SCI_MEAN=mean(EOT_SCI,na.rm=TRUE),N=n())
+  
+  sci_results_ind <- scsci %>% filter(TERMYR <= 1.5) %>% group_by(STDNT_ID) %>% 
+    mutate(EOT_SCI=weighted.mean(GRD_PNTS_PER_UNIT_NBR,UNITS_ERND_NBR,na.rm=TRUE)) %>% ungroup() %>% 
+    distinct(STDNT_ID,.keep_all=TRUE)
+  
+  return(list(fy_results,crse_results,sci_results,sci_results_ind))
+  
+  
+}
 #takes the list output of the replicate_molinaro_sept_2019 
-plot_results <- function(aa)
+plot_opp_results <- function(aa)
 {
   p1 <- aa[[1]] %>% ggplot(aes(x=OPP,y=FY_MEAN))+
     geom_point(aes(size=N))+ggtitle('First Year GPA')+
@@ -102,9 +153,28 @@ plot_results <- function(aa)
   print(p1)
   print(p2)
   print(p3)
-  print(p4)
+  #print(p4)
 }
 
+#takes the list output of the replicate_molinaro_sept_2019 
+plot_priv_results <- function(aa)
+{
+  p1 <- aa[[1]] %>% ggplot(aes(x=PRIV_INDEX,y=FY_MEAN))+
+    geom_point(aes(size=N))+ggtitle('First Year GPA')+
+    geom_text(aes(label=N),vjust=1,hjust=1)
+  p2 <- aa[[2]] %>% ggplot(aes(x=PRIV_INDEX,y=CRSE_MEAN))+
+    geom_point(aes(size=N))+ggtitle('STEM Course Results')
+  p3<- aa[[3]] %>% ggplot(aes(x=PRIV_INDEX,y=FY_SCI_MEAN))+
+    geom_point(aes(size=N))+ggtitle('First Year Science GPA')+
+    geom_text(aes(label=N),vjust=1,hjust=1)
+  p4<- aa[[4]] %>% group_by(PRIV_INDEX) %>% ggplot(aes(x=PRIV_INDEX,y=EOT_SCI))+
+    geom_boxplot()+ggtitle('First Year Science GPA')
+  
+  print(p1)
+  print(p2)
+  print(p3)
+  #print(p4)
+}
 
 ucd_opportunity <- function(sr)
 {
@@ -138,3 +208,17 @@ ucd_opportunity <- function(sr)
   
 }
   
+privilege_index <- function(sr)
+{
+  sr <- sr %>% mutate(PRIV_INDEX=4)
+  ind<-sr$STDNT_DMSTC_UNDREP_MNRTY_CD==0 | is.na(sr$STDNT_DMSTC_UNDREP_MNRTY_CD)
+  sr$PRIV_INDEX[!ind]<-sr$PRIV_INDEX[!ind]-1
+  ind<-sr$FIRST_GEN==0 | is.na(sr$FIRST_GEN)
+  sr$PRIV_INDEX[!ind]<-sr$PRIV_INDEX[!ind]-1   
+  ind<-sr$MEDNUM > 20000 | is.na(sr$MEDNUM)
+  sr$PRIV_INDEX[!ind]<-sr$PRIV_INDEX[!ind]-1  
+  ind<-sr$STDNT_GNDR_SHORT_DES=="Female"
+  sr$PRIV_INDEX[ind]<-sr$PRIV_INDEX[ind]-1
+  
+  return(sr)
+}
