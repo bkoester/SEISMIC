@@ -23,6 +23,7 @@
 #CATLG_NBR: course catalog number
 #TERM_CD: Term code
 #GRD_PNTS_PER_UNIT_NBR: course grade
+#EXCL_CLASS_CUM_GPA: cumultative GPA in other classes up to and including this term
 #UNITS_ERND_NBR: credits/units award for course completion.
 #TERMYR: the year in the student's career the course was taken
 #-----------
@@ -33,8 +34,10 @@
 #OPTIONS:
 #OPP: T/F. Calculate/plot the UC Davis Opportunity Factors?
 #PRIV: T/F. Calculate/plot H. Rypkema's Privilege Index?
+#GA: subtract EXCL_CLASS_CUM_GPA from grade to compute grade anomoly, and plot it.
+#    Be sure to change the ymin/ymax values appropriately (ymin=-1,ymax=1)
 ###############################
-replicate_molinaro_sept_2019 <- function(sr,sc,PRIV=TRUE,OPP=TRUE)
+replicate_molinaro_sept_2019 <- function(sr,sc,PRIV=TRUE,OPP=TRUE,GA=FALSE,ymin=0,ymax=4.0)
 {
     require(tidyverse)
     
@@ -70,16 +73,18 @@ replicate_molinaro_sept_2019 <- function(sr,sc,PRIV=TRUE,OPP=TRUE)
     sc <- sc   %>% mutate(CNAME=str_c(SBJCT_CD,CATLG_NBR)) %>% filter(TERM_CD >= 1650)
     sc <- sc %>% left_join(sr,by='STDNT_ID')
     
+    sc <- sc %>% mutate(GRD_PNTS_PER_UNIT_NBR=GRD_PNTS_PER_UNIT_NBR-EXCL_CLASS_CUM_GPA)
+    
     #now the analyses
     if (OPP == TRUE)
     {
       opp_output  <- opportunity_analysis(sc,ctab)
-      tt <- plot_opp_results(opp_output)
+      tt <- plot_opp_results(opp_output,ymin=ymin,ymax=ymax)
     }
     if (PRIV == TRUE)
     {
       priv_output <- privilege_analysis(sc,ctab)
-      tt <- plot_priv_results(priv_output)
+      tt <- plot_priv_results(priv_output,ymin=ymin,ymax=ymax)
     }
     
     return()
@@ -114,7 +119,6 @@ opportunity_analysis <- function(sc,ctab)
 privilege_analysis <- function(sc,ctab)
 {
   sc <- sc %>% drop_na(PRIV_INDEX)
-  
   fy_results <- sc %>% filter(TERMYR == 1.5) %>% distinct(STDNT_ID,.keep_all=TRUE) %>% group_by(PRIV_INDEX) %>% 
     summarize(FY_MEAN=mean(EOT_GPA,na.rm=TRUE),N=n())
   
@@ -137,18 +141,19 @@ privilege_analysis <- function(sc,ctab)
   
 }
 #takes the list output of the replicate_molinaro_sept_2019 
-plot_opp_results <- function(aa)
+plot_opp_results <- function(aa,ymin=0,ymax=4.0)
 {
+  
   p1 <- aa[[1]] %>% ggplot(aes(x=OPP,y=FY_MEAN))+
     geom_point(aes(size=N))+ggtitle('First Year GPA')+
-    geom_text(aes(label=N),vjust=1,hjust=1)
+    geom_text(aes(label=N),vjust=1,hjust=1)#+ylim(c(ymin,ymax))
   p2 <- aa[[2]] %>% ggplot(aes(x=OPP,y=CRSE_MEAN))+
-    geom_point(aes(size=N))+ggtitle('STEM Course Results')
+    geom_point(aes(size=N))+ggtitle('STEM Course Results')+ylim(c(ymin,ymax))
   p3<- aa[[3]] %>% ggplot(aes(x=OPP,y=FY_SCI_MEAN))+
                    geom_point(aes(size=N))+ggtitle('First Year Science GPA')+
-                   geom_text(aes(label=N),vjust=1,hjust=1)
+                   geom_text(aes(label=N),vjust=1,hjust=1)+ylim(c(ymin,ymax))
   p4<- aa[[4]] %>% group_by(OPP) %>% ggplot(aes(x=OPP,y=EOT_SCI))+
-    geom_boxplot()+ggtitle('First Year Science GPA')
+    geom_boxplot()+ggtitle('First Year Science GPA')+ylim(c(ymin,ymax))
   
   print(p1)
   print(p2)
@@ -157,18 +162,19 @@ plot_opp_results <- function(aa)
 }
 
 #takes the list output of the replicate_molinaro_sept_2019 
-plot_priv_results <- function(aa)
+plot_priv_results <- function(aa,ymin=0,ymax=4.0)
 {
+  
   p1 <- aa[[1]] %>% ggplot(aes(x=PRIV_INDEX,y=FY_MEAN))+
     geom_point(aes(size=N))+ggtitle('First Year GPA')+
-    geom_text(aes(label=N),vjust=1,hjust=1)
+    geom_text(aes(label=N),vjust=1,hjust=1)#+ylim(c(ymin,ymax))
   p2 <- aa[[2]] %>% ggplot(aes(x=PRIV_INDEX,y=CRSE_MEAN))+
-    geom_point(aes(size=N))+ggtitle('STEM Course Results')
+    geom_point(aes(size=N))+ggtitle('STEM Course Results')+ylim(c(ymin,ymax))
   p3<- aa[[3]] %>% ggplot(aes(x=PRIV_INDEX,y=FY_SCI_MEAN))+
     geom_point(aes(size=N))+ggtitle('First Year Science GPA')+
-    geom_text(aes(label=N),vjust=1,hjust=1)
+    geom_text(aes(label=N),vjust=1,hjust=1)+ylim(c(ymin,ymax))
   p4<- aa[[4]] %>% group_by(PRIV_INDEX) %>% ggplot(aes(x=PRIV_INDEX,y=EOT_SCI))+
-    geom_boxplot()+ggtitle('First Year Science GPA')
+    geom_boxplot()+ggtitle('First Year Science GPA')+ylim(c(ymin,ymax))
   
   print(p1)
   print(p2)
