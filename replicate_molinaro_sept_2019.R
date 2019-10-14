@@ -1,10 +1,16 @@
 ###########################
-#quick and dirty analysis of factors associated with 
-#STEM outcomes, orginally done at UC Davis.
+#PURPOSE: quick and dirty analysis of factors associated with 
+#         STEM outcomes, orginally done at UC Davis.
+#NOTES:   1) This takes "student record" and "student course" tables as inputs
+#         2) Science courses need to be defined locally (see line 70 below and "STEM_courses_UM.tab" on github)
+#         3) By default, this computes and plots grade anomalies. Set GA=FALSE and ymin/ymax to 0-4 to 
+#            get uncorrected grades.
+#         4) The first year science means and standard errors are returned as a table to the main level
+#            The intent is to share this table so that we can over plot all instituions.
 #student population:
 #MAJORS: all undergraduate
-#INTERNATIONAL STATUS: all
-#DEGREE SEEKING STATUS: all
+#INTERNATIONAL STATUS: all (see options)
+#DEGREE SEEKING STATUS: all (see options)
 #TRANSFER STATUS: all
 #COHORTS: FA 2015 to present.
 #INPUT tables:
@@ -16,6 +22,9 @@
 #STDNT_GNDR_SHORT_DES: Male or female
 #FIRST_TERM_ATTND_CD: first term attended college
 #MEDNUM: median income of permanent zipocde
+#TRANSFER: 1 or 0
+#STDNT_CTZN_STAT_CD: 1 = citizen, 2 = perm resident, 
+#                    3 = non-res, 4 = tax treaty, N = not indic
 #------------------------
 #sc: student course - 
 #STDNT_ID:unique student ID
@@ -34,13 +43,23 @@
 #OPTIONS:
 #OPP: T/F. Calculate/plot the UC Davis Opportunity Factors?
 #PRIV: T/F. Calculate/plot H. Rypkema's Privilege Index?
+#TRNSFR: -1 = keep everybody, 0 = only non-transfers, 1 = only transfers
+#INTL: -1 = keep everybody, 0 = only non-intl (above), 1  = only intl*
+#      *Note: Setting this to 1 (to select ONLY int'l will likely crash)
 #GA: subtract EXCL_CLASS_CUM_GPA from grade to compute grade anomoly, and plot it.
 #    Be sure to change the ymin/ymax values appropriately (ymin=-1,ymax=1)
 ###############################
-replicate_molinaro_sept_2019 <- function(sr,sc,PRIV=TRUE,OPP=TRUE,GA=FALSE,ymin=0,ymax=4.0)
+replicate_molinaro_sept_2019 <- function(sr,sc,PRIV=FALSE,OPP=TRUE,GA=TRUE,TRNSFR=-1,INTL=-1,ymin=-2,ymax=2)
 {
     require(tidyverse)
     
+    #set up transfers and int'l students as required
+    if (TRNSFR == 0){sr <- sr %>% filter(TRANSFER == 0)}
+    if (TRNSFR == 1){sr <- sr %>% filter(TRANSFER == 1)}
+    if (INTL == 0)  {sr <- sr %>% filter(STDNT_CTZN_STAT_CD == 1 | STDNT_CTZN_STAT_CD == 2)}
+    if (INTL == 1){sr <- sr %>% filter(STDNT_CTZN_STAT_CD != 1 & STDNT_CTZN_STAT_CD != 2)}
+   
+  
     #use a local script to compute the year in student's career that a 
     #course was a taken. This script is particular to Michigan, so not it's not shared.
     source('/Users/bkoester/Google\ Drive/code/Mellon/TOF/term_count.R')
@@ -73,13 +92,14 @@ replicate_molinaro_sept_2019 <- function(sr,sc,PRIV=TRUE,OPP=TRUE,GA=FALSE,ymin=
     sc <- sc   %>% mutate(CNAME=str_c(SBJCT_CD,CATLG_NBR)) %>% filter(TERM_CD >= 1650)
     sc <- sc %>% left_join(sr,by='STDNT_ID')
     
-    sc <- sc %>% mutate(GRD_PNTS_PER_UNIT_NBR=GRD_PNTS_PER_UNIT_NBR-EXCL_CLASS_CUM_GPA)
+    if (GA == TRUE) {sc <- sc %>% mutate(GRD_PNTS_PER_UNIT_NBR=GRD_PNTS_PER_UNIT_NBR-EXCL_CLASS_CUM_GPA)}
     
     #now the analyses
     if (OPP == TRUE)
     {
       opp_output  <- opportunity_analysis(sc,ctab)
       tt <- plot_opp_results(opp_output,ymin=ymin,ymax=ymax)
+      output <- opp_output[[3]]
     }
     if (PRIV == TRUE)
     {
@@ -87,7 +107,7 @@ replicate_molinaro_sept_2019 <- function(sr,sc,PRIV=TRUE,OPP=TRUE,GA=FALSE,ymin=
       tt <- plot_priv_results(priv_output,ymin=ymin,ymax=ymax)
     }
     
-    return()
+    return(output)
 }  
  
 opportunity_analysis <- function(sc,ctab)
@@ -105,7 +125,8 @@ opportunity_analysis <- function(sc,ctab)
   sci_results <- scsci %>% filter(TERMYR <= 1.5) %>% group_by(STDNT_ID) %>% 
     mutate(EOT_SCI=weighted.mean(GRD_PNTS_PER_UNIT_NBR,UNITS_ERND_NBR,na.rm=TRUE)) %>% ungroup() %>% 
     distinct(STDNT_ID,.keep_all=TRUE) %>% group_by(OPP) %>%
-    summarize(FY_SCI_MEAN=mean(EOT_SCI,na.rm=TRUE),N=n())
+    summarize(FY_SCI_MEAN=mean(EOT_SCI,na.rm=TRUE),N=n(),
+              FY_SCI_SE=sd(EOT_SCI,na.rm=TRUE)/sqrt(N))
   
   sci_results_ind <- scsci %>% filter(TERMYR <= 1.5) %>% group_by(STDNT_ID) %>% 
     mutate(EOT_SCI=weighted.mean(GRD_PNTS_PER_UNIT_NBR,UNITS_ERND_NBR,na.rm=TRUE)) %>% ungroup() %>% 
